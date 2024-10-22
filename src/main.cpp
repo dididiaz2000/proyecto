@@ -33,7 +33,6 @@ void injectGas(String gasType, float flowRate);
 void controlValve(int valvePin, bool open);
 void checkPressure();
 void storeMotorPosition();
-void restoreMotorPosition();
 float readFlowInSLM(); // Dummy function for flow reading
 float readPressure(String gasType); // Dummy function for pressure reading
 void handleGasGeneration(String gasType);
@@ -42,7 +41,6 @@ void mixedGasInjection(float o2Percent, float n2Percent, float airPercent);
 void setup() {
     Serial.begin(115200);
     preferences.begin("gasControl", false); // Start preferences
-    restoreMotorPosition(); // Restore the last motor position
     // Set pin modes
     pinMode(pumpPin, OUTPUT);
     pinMode(mixValve1Pin, OUTPUT);
@@ -65,9 +63,14 @@ void loop() {
 void injectGas(String gasType, float flowRate) {
     // Set target flow rate
     targetFlowRate = flowRate;
-    // Control the stepper motor and valves based on the gas type
-    // Implement PID control here
+    
+    // Determine how many steps to move based on the desired flow rate
+    int stepsToMove = calculateStepsForFlowRate(flowRate); // Implement this calculation based on your system
+    moveStepper(stepsToMove); // Move the stepper motor
+    
+    // Implement PID control logic here
 }
+
 
 void controlValve(int valvePin, bool open) {
     digitalWrite(valvePin, open ? HIGH : LOW); // Activate or deactivate the valve
@@ -93,10 +96,12 @@ void storeMotorPosition() {
     preferences.putLong(motorPositionKey, motorPosition);
 }
 
-void restoreMotorPosition() {
-    motorPosition = preferences.getLong(motorPositionKey, 0);
-    stepper.setCurrentPosition(motorPosition); // Set stepper position
+void moveStepper(int steps) {
+    stepper.step(steps); // Move the stepper motor by a specified number of steps
+    motorPosition += steps; // Update the current position
+    storeMotorPosition(); // Store the position in non-volatile memory
 }
+
 
 void mixedGasInjection(float o2Percent, float n2Percent, float airPercent) {
     // Calculate the total time for each gas injection based on percentages
