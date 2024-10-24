@@ -1,78 +1,66 @@
 # PROYECTO 
 ## Comienzo
-He empezado con el proyecto y compila bien, lo que es la plataforma como tal, este commit es el bueno por ahora. 
+He comenzado con el proyecto y compila bien. Lo que es la plataforma, como tal, este commit es el bueno por ahora.
 
 ### platformio.ini
-Basandome en el codigo json, lo he convertido en el platformio.io segun las especificaciones que ponia.  
-Para que funcionen todas las bibliotecas que necesitaba he añadido una linea de codigo mas en la configuración:
+Basándome en el código JSON, lo he convertido en el platformio.ini según las especificaciones que indicaba. Para que funcionen todas las bibliotecas que necesitaba, he añadido una línea más en la configuración:
 
     $ lib_deps = Stepper
 
-Tambien he tenido que cambiar una linea:
-
-    $ upload_flash_size = 16
-
-por: 
-
-    $ board_flash_size = 16
-
-Por facilidad he aliminado el segundo framework de "espidf".  
-En el sdkconfig era encesario cambiar el "CONFIG_FREERTOS_HZ" de 100 a 1000.
-
-Corrigiendo estos errores ya funciona el 'platformio.ini'.
+Por facilidad, he eliminado el segundo framework de "espidf". Corrigiendo estos errores, ya funciona el platformio.ini.
 
 ## Proyecto
 He creado un nuevo proyecto basandome en el primero y en otros proyectos.
 
 ### platformio.ini:
-Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas en la configuración:
+Para que funcionen las bibliotecas que necesitaba, he añadido una librería más en la configuración:
 
     $ lib_deps = Stepper, br3ttb/PID @ ^1.2.0
 
 ### proyecto.cpp 
-1. Librerias
-2. Definimos los pines segun la tabla
+1. Librerías
+2. Definimos los pines según la tabla
     IN1-IN4: pines de las boninas del motor.
 3. Configuramos el motor paso a paso (en nuestro caso 28BYJ-48, 2048 pasos por revolución)(1)
     stepper:  objeto que controla el motor
-    stepsPerRevolution: numero de pasos por revolucion
+    stepsPerRevolution: número de pasos por revolución
 4. Utilizamos un controlador PID para ajustar el valor de salida, de entrada y un valor deseado.(2)
     - Variables:
         - setpoint: valor a alcanzar.
         - input: valor que mide el sistema.
-        - output: valor que el PID va a calcular para aplicar una correcion (en nuestro caso controlara una valvula).
+        - output: valor que el PID va a calcular para aplicar una corrección (en nuestro caso, controlará una válvula).
     - Ganancias:
-        - Kp(proporcional): termino  que corrige la parte proporcinal al error. Mientras mas grande sea el error (diferencia entre setpoint e input), mas grande sera la correccion.
-        - Ki(integral): este termino suma los errores pasados. Se usa para eliminar errores persistentes.
-        - Kd(derivativo): este termino tiene en cuenta la  velocidad del cambio de error. Ayuda a predecir el futuro error y hacer ajustes mas suaves.
+        - Kp(proporcional): término que corrige la parte proporcional al error. Mientras más grande sea el error (diferencia entre setpoint e input), más grande será la corrección.
+        - Ki(integral): este término suma los errores pasados. Se usa para eliminar errores persistentes.
+        - Kd(derivativo): este término tiene en cuenta la velocidad del cambio de error. Ayuda a predecir el futuro error y hacer ajustes más suaves.
     - PID:
-        Creamos un objeto de PID y lo configuramos con los parametros ya definidos. El ultimo "DIRECT" indica que el actuador debe actuar directamente sobre la salida para corregir el error. Si fuera "REVERSE", significaria qeu el sistema tendria un comportamiento inverso.
+        Creamos un objeto de PID y lo configuramos con los parámetros ya definidos. El último "DIRECT" indica que el actuador debe actuar directamente sobre la salida para corregir el error. Si fuera "REVERSE", significaría que el sistema tendría un comportamiento inverso.
 5. Iniciamos las variables de control para  el flujo y posicion del motor.
-    - stepperPosition: almacena la posicion actual del motor paso a paso en terminos de pasos. Esta en 0, lo que sugiere que el motor esta en su posicion de referencia.
-    - targetFlowRate: almacena la tasa del flujo objetivo que se desea alcanzar. Representa cuantos litros por minuto de gas se desea inyectar.
+    - stepperPosition: almacena la posición actual del motor paso a paso en términos de pasos. Está en 0, lo que sugiere que el motor está en su posición de referencia.v
+    - targetFlowRate: almacena la tasa del flujo objetivo que se desea alcanzar. Representa cuántos litros por minuto de gas se desea inyectar.
     - currentFlowRate: almacena la tasa de flujo de gas actual medida con el sensor. Se compara con targetFlowRate para determinar si se necesita ajustar el sistema.
-    - valveState: almacena el estado actual de una valvula. Low significa que esta cerrado.
+    - valveState: almacena el estado actual de una válvula. Low significa que está cerrada.
 6. void setup()
-    Es la funcion qeu se ejecuta cuando se inicia el microcontrolador.
+    Es la función que se ejecuta cuando se inicia el microcontrolador.
     - Inicializamos los pines: 
-        Todos se configuran como salidas. Significa que estos pines se usaran para enviar señales a las valvulas o al generador de O3, para abrir o cerrarlas.
+        Todos se configuran como salidas. Significa que estos pines se usarán para enviar señales a las válvulas o al generador de O3, para abrirlas o cerrarlas.
     - Inicializamos el Motor Paso a Paso:
-        Establece la velocidad del motor paso a paso en revoluciones por minuto, en nuestro caso en 15rpm.
+        Establece la velocidad del motor paso a paso en revoluciones por minuto, en nuestro caso en 15 rpm.
     - Configuramos el PID:
-        - SetMode(AUTOMATIC): Modo automatico. Esto significa que el PID comenzara a calcular automaticamente las salidas en funciones de input y setpoint que se le proporcionen mas adelante en el codigo.
-        - SetOutputLimits(-100,100): Limita el rando de salida del PID entre -100 y 100. Es importante porque la salida se utilizara para determianr cuantos pasos debe mover el motor. Limitarlo ayuda a evitar movimientos excesivos o erraticos del motor.
+        - SetMode(AUTOMATIC): Modo automático. Esto significa que el PID comenzará a calcular automáticamente las salidas en función de input y setpoint que se le proporcionen más adelante en el código.
+        - SetOutputLimits(-100,100):  Limita el rango de salida del PID entre -100 y 100. Es importante porque la salida se utilizará para determinar cuántos pasos debe mover el motor. Limitarlo ayuda a evitar movimientos excesivos o erráticos del motor.
     - Recuperar la posicion del motor:
-    Una funcion que simula la recuperacion de la posicion anterior del motor desde una memoria no volatil.
+    Una función que simula la recuperación de la posición anterior del motor desde una memoria no volátil.
 7. void loop()
-    - Con la funcion continuousO2Injection() se gestiona la inyeccion continua de oxigeno. Mas adelante se explica la funcion mejor.  
-    Analogamente con el resto.
-    - Con la funcion continuousMixedGasInjection() se inyecta una mezcla de gases  en las proporciones especificadas. Lo mismo, mas adelante se explica mejor la funcion.
-    - La tasa de flujo de O2 (10SLM), garantiza que haya suficiente oxigeno para crear O3 a la cantidad requerida para la aplicacion.
-    - La cantidad  de O3 inyectado (7SLM), esta vinculada a la demanda de ozono del sistema, y las proporciones se ajustan en consecuencia para equilibrar el uso de oxigeno y a produccion de ozono.
-    - La cantidad de N2 inyectado (5atm), si la presion del tanque supera 5atm , se debe abrir la valvula de liberacion hasta que la presion baje a un nivel seguro. Esto sugiere que 5atm es el limite maximo que el sistema puede manejar sin riesgos de sobrepresion.
-    - Como las especificaciones dicen que la presion tiene que estar entre 2atm y 5atm, las tasas se establecen de manera que no sobrepasen esos limites de presion. Si la presion cae por debajo ed 2atm, se activa la bandera de generacion de gas. 
-    - En el caso de la inyeccion de gases mixtos los valores como 3SLM de O2, 4SLM de N2 y 2SLM de aire han sido calculados para mantener una mezcla equilibrada, esta diseñado para que el gas inyectado sea homogeneo y seguro. Ademas, las tasas han sido ajustados para optimizar el rendimiento del PID, asegurando qeu las valvulas y el motor respondan de manera eficiente.
-8. readFlowinSLM()
+    - Con la función continuousO2Injection() se gestiona la inyección continua de oxígeno. Más adelante se explica la función.  
+    Análogamente con el resto.
+    - Con la función continuousMixedGasInjection() se inyecta una mezcla de gases en las proporciones especificadas. Lo mismo, más adelante se explica mejor la función.
+    - La tasa de flujo de O2 (10 SLM) garantiza que haya suficiente oxígeno para crear O3 a la cantidad requerida para la aplicación.
+    - La cantidad de O3 inyectado (7 SLM) está vinculada a la demanda de ozono del sistema, y las proporciones se ajustan en consecuencia para equilibrar el uso de oxígeno y la producción de ozono.
+    - La cantidad de N2 inyectado (5 atm). Si la presión del tanque supera 5 atm, se debe abrir la válvula de liberación hasta que la presión baje a un nivel seguro. Esto sugiere que 5 atm es el límite máximo que el sistema puede manejar sin riesgos de sobrepresión.
+    - Como las especificaciones dicen que la presión tiene que estar entre 2 atm y 5 atm, las tasas se establecen de manera que no sobrepasen esos límites de presión. Si la presión cae por debajo de 2 atm, se activa la bandera de generación de gas. 
+    - En el caso de la inyección de gases mixtos, los valores como 3 SLM de O2, 4 SLM de N2 y 2 SLM de aire han sido calculados para mantener una mezcla equilibrada. Está diseñado para que el gas inyectado sea homogéneo y seguro. Además, las tasas han sido ajustadas para optimizar el rendimiento del PID, asegurando que las válvulas y el motor respondan de manera eficiente.
+8. readFlowinSLM()  
     Simula la lectura del flujo de gas
     - Agregar fluctuaciones aleatorias. Generar una pequeña variación aleatoria (+/- 5 unidades) para simular el ruido del sensor.
         ```cpp
@@ -89,7 +77,7 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
             return currentFlowRate;
         }
         ```
-    - Simular el comportamiento de un sensor real basado en objetos, se puede implementar una logica que intente aproximar el flujo simulado.
+    - Simular el comportamiento de un sensor real basado en objetos, se puede implementar una lógica que intente aproximar el flujo simulado.
         ```cpp
         int readFlowinSLM() {
             if (currentFlowRate < targetFlowRate){
@@ -100,7 +88,7 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
             return currentFlowRate;
         }
         ```
-    - Simulacion completa con variabilidad realista, ideas para simular un comportamiento mas completo, incluyendo fluctuaciones, ajustes dinamicos y limites de flujo.
+    - Simulación completa con variabilidad realista, ideas para simular un comportamiento más completo, incluyendo fluctuaciones, ajustes dinámicos y límites de flujo.
         ```cpp
         int readFlowinSLM() {
             int fluctuation = random(-3, 3); 
@@ -114,14 +102,14 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
             return currentFlowRate;
         }
         ```
-9. storeStepperPosition()
-    Simula el almacenamiento del motor paso a paso, que normalmente estaria en la memoria no volatil. En este paso tenemos que añadir algunas cosas:
-    - Incluir librerias necesarias, para usar la memoria no volatil(NVS):
+9. storeStepperPosition()  
+    Simula el almacenamiento del motor paso a paso, que normalmente estaría en la memoria no volátil. En este paso, tenemos que añadir algunas cosas:
+    - Incluir las librerías necesarias para usar la memoria no volátil (NVS):
         ```cpp
         #include <nvs.h>
         #include <nvs_flash.h>
         ```
-    - Incicializar NVS en el setup():
+    - Inicializar NVS en el setup():
         ```cpp
         void setup() {
         esp_err_t ret = nvs_flash_init();
@@ -134,7 +122,7 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
         // Luego inicializas el motor, el PID, etc.
         }
         ```
-    - Implementar la funcion en el loop():
+    - Implementar la función en el loop():
         ```cpp
         void loop() {
             // Código del sistema...
@@ -143,7 +131,7 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
             storeStepperPosition();
         }
         ```
-    - Implementamos la funcion storeStepperPosition(), guardara la posicion del motor en la NVS:
+    - Implementamos la función storeStepperPosition(), guardará la posición del motor en la NVS:
         ```cpp
         void storeStepperPosition() {
             // Abrir el handle de NVS
@@ -170,8 +158,8 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
             nvs_close(nvs_handle);
         }
         ```
-10. retrieveStepperPosition()
-    Se necesita tambien una funcion para leer la ultima posicion almacenada cunado el sistema se reinicie:
+10. retrieveStepperPosition()  
+    Función para leer la última posición almacenada al reiniciar el sistema:
     ```cpp
     int retrieveStepperPosition() {
         nvs_handle_t nvs_handle;
@@ -195,47 +183,45 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
         return storedStepperPosition;
     }
     ```
-11. moveToPosition()
-    Mueve el motor paso a paso a una posicion especifica. Calcula cuantos pasos se necesitan y luego actualiza la posicion.
-    - Primero controlamos los limites del motor, nos aseguramos que la posicion no baje de 0 y no supere los 2048 pasos.
-    - Usamos el PID para regular el flujo de gases. El PID ajusta la posicion del motor en funcion de la tasa de flujo medida y el objetivo(input+setpoint).
-12. moveStepper()
-    Controla el motor paso a paso. Mueve el motor la cantidad de pasos especificada
-13. controlFlow()
-    La logica para controlar el flujo del PID. 
-    - Ajustamos la velocidad en baso a la desviacion entre setpoint y currentFlowRate.
-    - 
-14. smoothFlowRate()
-    Los sensores de flujo pueden ser ruidosos. Si la tasa de flujo fluctua mucho debido al ruido del sensor, por ello se implementa un filtro de suavizado en las lecturas del sensor para obtener una medida mas estable.
-    - Se guardan las ultimas lecturas. El filtro mantiene un historial de lecturas para calcular el promedio. Cuanto mas alto es el numero mas lento se vuelve el filtro.
-    - Se agrega la nueva lectura. Llega la nuevo alectura y esta reemplaza a una de las lecturas anteriores.
+11. moveToPosition()  
+    Mueve el motor paso a paso a una posición específica, ajustando con PID en función de la tasa de flujo medida.
+    - Primero controlamos los límites del motor, nos aseguramos que la posición no baje de 0 y no supere los 2048 pasos.
+    - Usamos el PID para regular el flujo de gases. El PID ajusta la posición del motor en función de la tasa de flujo medida y el objetivo(input+setpoint).
+12. moveStepper()  
+    Controla el motor paso a paso moviendo la cantidad de pasos necesaria.
+13. controlFlow()  
+    Controla el flujo con el PID, ajustando la velocidad del motor según la desviación entre setpoint y currentFlowRate.
+14. smoothFlowRate()  
+    Aplica un filtro de suavizado a las lecturas del sensor de flujo. Los sensores de flujo pueden ser ruidosos. Si la tasa de flujo fluctúa mucho debido al ruido del sensor, por ello se implementa un filtro de suavizado en las lecturas del sensor para obtener una medida mas estable.
+    - Se guardan las ultimas lecturas. El filtro mantiene un historial de lecturas para calcular el promedio. Cuanto más alto es el número mas lento se vuelve el filtro.
+    - Se agrega la nueva lectura. Llega la nueva lectura y esta reemplaza a una de las lecturas anteriores.
     - Calcula el promedio. 
-    - Devuelve el valor suavizado. Garantiza que los pequeños cambios en la lecutra no afecten la salida del sistema de control.
-15. activateValve() y deactivateValve()
+    - Devuelve el valor suavizado. Garantiza que los pequeños cambios en la lectura no afecten la salida del sistema de control.
+15. activateValve() y deactivateValve()  
     Son las funciones para activar y desactivar las valvulas de acuerdo con el input.
     - Conectadas a los pines del microcontrolador ESP32. Las valvulas estan controladas por MOSFETs, estos activan y desactivan mediante una señal de control un pin digital.
-    - Cada valvula tiene asignado un pin especifico.
+    - Cada valvula tiene asignado un pin específico.
     - HIGH para abrir y LOW para cerrar.
 16. injectGas()
-    Esta funcion la verdad es para hacer mas escalable el codigo, encapsula todo el proceso de inyeccion de gas en una unica funcion. Utiliza las funciones ya mencionadas para inyectar el gas.
+    Esta función, la verdad, es para hacer mas escalable el codigo, encapsula todo el proceso de inyección de gas en una unica función. Utiliza las funciones ya mencionadas para inyectar el gas.
 17. calculateStepsForFlowRate()
     Diseñada para convertir un flujo de gas deseado en la cantidad e pasos que debe moverse el motor paso a paso para alcanzar ese flujo.
-    - Define los pasos por revolucion.
+    - Define los pasos por revolución.
     - Define el flujo maximo.
     - Se calculan los pasos por SLM.
 18. continuousInjection()
-    Son las funciones para los escenarios de inyeccion de gas.
-    - O2 inyecta oxigeno aun flujo especifico, maneja la apertura de la valvula, control del flujo y el cierro de la valvula.
-    - N2 analogo al de O2.
-    - O3 esta funcion es un poco mas compleja, requiere activar el generador de ozono antes de inyectar oxigeno. Al abrir el generador de ozono, se asegura que cuando se inyecta oxigeno, se produce ozono, dado que el generador convierte O2 en O3.
+    Son las funciones para los escenarios de inyección de gas.
+    - O2 inyecta oxigeno aun flujo específico, maneja la apertura de la valvula, control del flujo y el cierre de la valvula.
+    - N2 análogo al de O2.
+    - O3 esta función es un poco mas compleja, requiere activar el generador de ozono antes de inyectar oxigeno. Al abrir el generador de ozono, se asegura que cuando se inyecta oxigeno, se produce ozono, dado que el generador convierte O2 en O3.
 19. continuousMixedGasInjection()
     Diseñada para inyectar una mezcla de gases (O2, N2 y aire filtrado).
-    - Los parametros de entrada son las tasas de flujo objetivo que se inyectara.
+    - Los parametros de entrada son las tasas de flujo objetivo que se inyectará.
     - Las valvulas se abren de manera secuencial sin bloquear el sistema, se busca mantener la funcionalidad y la reactividad del sistema mientras se manejan los flujos de gas.
-    - La funcion llama tres veces a la funcion para inyectar cada gas:O2, N2 y aire filtrado.
+    - La función llama tres veces a la funcion para inyectar cada gas:O2, N2 y aire filtrado.
 
 ### default_16MB.csv
-    DEscribe como se va a particionar la memoria flash de tu ESP32-S3.
+    Describe como se va a particionar la memoria flash del ESP32-S3.
     ```default_16MB.csv
     # Name,   Type, SubType, Offset,  Size, Flags
     nvs,      data, nvs,     0x9000,  0x5000,
@@ -245,7 +231,7 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
     spiffs,   data, spiffs,  0x630000,0x1d0000,
     ```
 ## Modificaciones para usar el config.json
-Haciendo estas modificaciones deberia dejarme usar el .json que me proporcionaron en cultzyme.
+Se añaden las siguientes modificaciones para usar un archivo de configuración config.json proporcionado.
 
 ### Entorno virtual o no
 En caso de que no queramos usar el entorno virtual:
@@ -261,12 +247,12 @@ Como a veces no deja utilizar todos los comandos de platformio en la terminal po
     $ deactivate
 
 ### load_config.py
-Para poder usar el config.json primero tenemos que configurar un archivo llamado load_config.py en python. Lo que hace es cargar un archivo de configuracion en formato JSON.
+Para poder usar el config.json primero tenemos que configurar un archivo llamado load_config.py en python. Lo que hace es cargar un archivo de configuración en formato JSON.
 
 ### platformio.ini
-Para poder usar el load_config.py debemos añdir la siguiente linea:
+Para poder usar el load_config.py debemos añadir la siguiente linea:
     $ extra_scripts = load_config.py
 
-### Apuntes
-(1) Esto define la precision del control, un valor de pasos mas alto significa un movimiento mas fino.  
-(2) Un controlador PID es un algoritmo de control utilizado para mantener una variable (en nuestro caso presion) lo mas cerca posible de un valor deseado (setpoint) mediante ajustes automaticos.
+## Apuntes
+(1) Esto define la precisión del control, un valor de pasos más alto significa un movimiento más fino.  
+(2) Un controlador PID es un algoritmo de control utilizado para mantener una variable (en nuestro caso presión) lo mas cerca posible de un valor deseado (setpoint) mediante ajustes automaticos.
