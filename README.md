@@ -239,6 +239,18 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
     - Las valvulas se abren de manera secuencial sin bloquear el sistema, se busca mantener la funcionalidad y la reactividad del sistema mientras se manejan los flujos de gas.
     - La funcion llama tres veces a la funcion para inyectar cada gas:O2, N2 y aire filtrado.
 
+### default_16MB.csv
+    DEscribe como se va a particionar la memoria flash de tu ESP32-S3.
+    ```default_16MB.csv
+    # Name,   Type, SubType, Offset,  Size, Flags
+    nvs,      data, nvs,     0x9000,  0x5000,
+    otadata,  data, ota,     0xe000,  0x2000,
+    app0,     app,  ota_0,   0x10000, 0x310000,
+    app1,     app,  ota_1,   0x320000, 0x310000,
+    spiffs,   data, spiffs,  0x630000,0x1d0000,
+    ```
+
+
 ### Apuntes
 (1) Esto define la precision del control, un valor de pasos mas alto significa un movimiento mas fino.  
 (2) Un controlador PID es un algoritmo de control utilizado para mantener una variable (en nuestro caso presion) lo mas cerca posible de un valor deseado (setpoint) mediante ajustes automaticos.
