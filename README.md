@@ -21,11 +21,6 @@ En el sdkconfig era encesario cambiar el "CONFIG_FREERTOS_HZ" de 100 a 1000.
 
 Corrigiendo estos errores ya funciona el 'platformio.ini'.
 
-### main.cpp:
-- He añadido los includes necesarios.
-- El codigo tiene muchas funciones que en principio deberian funcionar.
-- El primer intento de compilacion lo deberia hacer el miercoles si todo va bien.
-
 ## Proyecto
 He creado un nuevo proyecto basandome en el primero y en otros proyectos.
 
