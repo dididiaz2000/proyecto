@@ -204,29 +204,36 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
     Mueve el motor paso a paso a una posicion especifica. Calcula cuantos pasos se necesitan y luego actualiza la posicion.
     - Primero controlamos los limites del motor, nos aseguramos que la posicion no baje de 0 y no supere los 2048 pasos.
     - Usamos el PID para regular el flujo de gases. El PID ajusta la posicion del motor en funcion de la tasa de flujo medida y el objetivo(input+setpoint).
-12. controlFlow()
+12. moveStepper()
+    Controla el motor paso a paso. Mueve el motor la cantidad de pasos especificada
+13. controlFlow()
     La logica para controlar el flujo del PID. 
     - Ajustamos la velocidad en baso a la desviacion entre setpoint y currentFlowRate.
     - 
-13. smoothFlowRate()
+14. smoothFlowRate()
     Los sensores de flujo pueden ser ruidosos. Si la tasa de flujo fluctua mucho debido al ruido del sensor, por ello se implementa un filtro de suavizado en las lecturas del sensor para obtener una medida mas estable.
     - Se guardan las ultimas lecturas. El filtro mantiene un historial de lecturas para calcular el promedio. Cuanto mas alto es el numero mas lento se vuelve el filtro.
     - Se agrega la nueva lectura. Llega la nuevo alectura y esta reemplaza a una de las lecturas anteriores.
     - Calcula el promedio. 
     - Devuelve el valor suavizado. Garantiza que los pequeños cambios en la lecutra no afecten la salida del sistema de control.
-14. activateValve() y deactivateValve()
+15. activateValve() y deactivateValve()
     Son las funciones para activar y desactivar las valvulas de acuerdo con el input.
     - Conectadas a los pines del microcontrolador ESP32. Las valvulas estan controladas por MOSFETs, estos activan y desactivan mediante una señal de control un pin digital.
     - Cada valvula tiene asignado un pin especifico.
     - HIGH para abrir y LOW para cerrar.
-15. injectGas()
+16. injectGas()
     Esta funcion la verdad es para hacer mas escalable el codigo, encapsula todo el proceso de inyeccion de gas en una unica funcion. Utiliza las funciones ya mencionadas para inyectar el gas.
-16. continuousInjection()
+17. calculateStepsForFlowRate()
+    Diseñada para convertir un flujo de gas deseado en la cantidad e pasos que debe moverse el motor paso a paso para alcanzar ese flujo.
+    - Define los pasos por revolucion.
+    - Define el flujo maximo.
+    - Se calculan los pasos por SLM.
+18. continuousInjection()
     Son las funciones para los escenarios de inyeccion de gas.
     - O2 inyecta oxigeno aun flujo especifico, maneja la apertura de la valvula, control del flujo y el cierro de la valvula.
     - N2 analogo al de O2.
     - O3 esta funcion es un poco mas compleja, requiere activar el generador de ozono antes de inyectar oxigeno. Al abrir el generador de ozono, se asegura que cuando se inyecta oxigeno, se produce ozono, dado que el generador convierte O2 en O3.
-17. continuousMixedGasInjection()
+19. continuousMixedGasInjection()
     Diseñada para inyectar una mezcla de gases (O2, N2 y aire filtrado).
     - Los parametros de entrada son las tasas de flujo objetivo que se inyectara.
     - Las valvulas se abren de manera secuencial sin bloquear el sistema, se busca mantener la funcionalidad y la reactividad del sistema mientras se manejan los flujos de gas.

@@ -27,6 +27,18 @@ int targetFlowRate = 0;
 int currentFlowRate = 0; // Simulación del flujo actual
 int valveState = LOW;
 
+// Declaraciones de funciones
+void continuousO2Injection(int targetFlow);
+void continuousN2Injection(int targetFlow);
+void continuousO3Injection(int targetFlow);
+void continuousMixedGasInjection(int targetFlowO2, int targetFlowN2, int targetFlowAir);
+void storeStepperPosition();
+int retrieveStepperPosition();
+int smoothFlowRate(int newFlowRate);
+void controlFlow();
+int calculateStepsForFlowRate(float flowRate);
+void moveStepper(int steps);
+
 void setup() {
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -93,22 +105,22 @@ void storeStepperPosition() {
 }
 
 int retrieveStepperPosition() {
-        nvs_handle_t nvs_handle;
-        int32_t storedStepperPosition = 0;
-        esp_err_t err = nvs_open("storage", NVS_READONLY, &nvs_handle);
+    nvs_handle_t nvs_handle;
+    int32_t storedStepperPosition = 0;
+    esp_err_t err = nvs_open("storage", NVS_READONLY, &nvs_handle);
+    if (err == ESP_OK) {
+        err = nvs_get_i32(nvs_handle, "stepperPos", &storedStepperPosition);
         if (err == ESP_OK) {
-            err = nvs_get_i32(nvs_handle, "stepperPos", &storedStepperPosition);
-            if (err == ESP_OK) {
-                Serial.println("Posición recuperada de NVS");
-            } else {
-                Serial.println("No se encontró la posición en NVS");
-            }
-            nvs_close(nvs_handle);
+            Serial.println("Posición recuperada de NVS");
         } else {
-            Serial.println("Error al abrir NVS para leer");
+            Serial.println("No se encontró la posición en NVS");
         }
-        return storedStepperPosition;
+        nvs_close(nvs_handle);
+    } else {
+        Serial.println("Error al abrir NVS para leer");
     }
+    return storedStepperPosition;
+}
 
 // Función para mover el motor a una posición específica
 void moveToPosition(int targetPosition) {
@@ -121,6 +133,15 @@ void moveToPosition(int targetPosition) {
     stepper.step(stepsToMove);
     stepperPosition = targetPosition;
     storeStepperPosition();
+}
+
+void moveStepper(int steps) {
+    // Mueve el motor la cantidad de pasos especificada
+    if (steps > 0) {
+        stepper.step(steps); // Mover hacia adelante
+    } else {
+        stepper.step(-steps); // Mover hacia atrás
+    }
 }
 
 // Función para manejar el control PID del flujo
@@ -182,6 +203,13 @@ void injectGas(int valvePin, int targetFlow) {
     activateValve(valvePin);
     controlFlow();
     deactivateValve(valvePin);
+}
+
+int calculateStepsForFlowRate(float flowRate) {
+    int stepsPerRevolution = 2048; // Número de pasos por revolución
+    float maxFlowRate = 10.0; // Flujo máximo en SLM
+    float stepsPerSLM = stepsPerRevolution / maxFlowRate; // Calcular pasos por SLM
+    return flowRate * stepsPerSLM;
 }
 
 // Funciones para escenarios de inyección de gases
