@@ -3,7 +3,8 @@
 He empezado con el proyecto y compila bien, lo que es la plataforma como tal, este commit es el bueno por ahora. 
 
 ### platformio.ini
-Para que me funcionen todas las bibliotecas que necesitaba he añadido una linea de codigo mas en la configuración:
+Basandome en el codigo json, lo he convertido en el platformio.io segun las especificaciones que ponia.  
+Para que funcionen todas las bibliotecas que necesitaba he añadido una linea de codigo mas en la configuración:
 
     $ lib_deps = Stepper
 
@@ -77,7 +78,159 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
     - Como las especificaciones dicen que la presion tiene que estar entre 2atm y 5atm, las tasas se establecen de manera que no sobrepasen esos limites de presion. Si la presion cae por debajo ed 2atm, se activa la bandera de generacion de gas. 
     - En el caso de la inyeccion de gases mixtos los valores como 3SLM de O2, 4SLM de N2 y 2SLM de aire han sido calculados para mantener una mezcla equilibrada, esta diseñado para que el gas inyectado sea homogeneo y seguro. Ademas, las tasas han sido ajustados para optimizar el rendimiento del PID, asegurando qeu las valvulas y el motor respondan de manera eficiente.
 8. readFlowinSLM()
+    Simula la lectura del flujo de gas
+    - Agregar fluctuaciones aleatorias. Generar una pequeña variación aleatoria (+/- 5 unidades) para simular el ruido del sensor.
+        ```cpp
+        int readFlowinSLM() {
+            int simulatedFlow = currentFlowRate + random(-5, 5); 
+            return simulatedFlow;
+        }
+        ```
+    - Simular un flujo progresivo o dependiente del tiempo, imitando un sistema donde el flujo cambia con el tiempo.
+        ```cpp
+        int readFlowinSLM() {
+            currentFlowRate += random(-1, 2);
+            if (currentFlowRate < 0) currentFlowRate = 0;
+            return currentFlowRate;
+        }
+        ```
+    - Simular el comportamiento de un sensor real basado en objetos, se puede implementar una logica que intente aproximar el flujo simulado.
+        ```cpp
+        int readFlowinSLM() {
+            if (currentFlowRate < targetFlowRate){
+                currentFlowRate++;
+            } else if (currentFlowRate > targetFlowRate) {
+                currentFlowRate--;
+            }
+            return currentFlowRate;
+        }
+        ```
+    - Simulacion completa con variabilidad realista, ideas para simular un comportamiento mas completo, incluyendo fluctuaciones, ajustes dinamicos y limites de flujo.
+        ```cpp
+        int readFlowinSLM() {
+            int fluctuation = random(-3, 3); 
+            if (currentFlowRate < targetFlowRate) {
+                currentFlowRate += 1 + fluctuation; 
+            } else if (currentFlowRate > targetFlowRate) {
+                currentFlowRate -= 1 + fluctuation; 
+            }
+            if (currentFlowRate < 0) currentFlowRate = 0;
+            if (currentFlowRate > targetFlowRate + 10) currentFlowRate = targetFlowRate + 10;
+            return currentFlowRate;
+        }
+        ```
+9. storeStepperPosition()
+    Simula el almacenamiento del motor paso a paso, que normalmente estaria en la memoria no volatil. En este paso tenemos que añadir algunas cosas:
+    - Incluir librerias necesarias, para usar la memoria no volatil(NVS):
+        ```cpp
+        #include <nvs.h>
+        #include <nvs_flash.h>
+        ```
+    - Incicializar NVS en el setup():
+        ```cpp
+        void setup() {
+        esp_err_t ret = nvs_flash_init();
+        if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+            ESP_ERROR_CHECK(nvs_flash_erase());
+            ret = nvs_flash_init();
+        }
+        ESP_ERROR_CHECK(ret);
     
+        // Luego inicializas el motor, el PID, etc.
+        }
+        ```
+    - Implementar la funcion en el loop():
+        ```cpp
+        void loop() {
+            // Código del sistema...
+            // Mover motor según sea necesario
+            // Actualizar la posición y guardarla en NVS
+            storeStepperPosition();
+        }
+        ```
+    - Implementamos la funcion storeStepperPosition(), guardara la posicion del motor en la NVS:
+        ```cpp
+        void storeStepperPosition() {
+            // Abrir el handle de NVS
+            nvs_handle_t nvs_handle;
+            esp_err_t err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
+            if (err != ESP_OK) {
+                Serial.println("Error al abrir NVS");
+                return;
+            }
+
+            // Guardar la posición del motor (entero)
+            err = nvs_set_i32(nvs_handle, "stepperPos", stepperPosition);
+            if (err != ESP_OK) {
+                Serial.println("Error al guardar en NVS");
+            }
+
+            // Guardar los cambios
+            err = nvs_commit(nvs_handle);
+            if (err != ESP_OK) {
+                Serial.println("Error al confirmar cambios en NVS");
+            }
+
+            // Cerrar el handle de NVS
+            nvs_close(nvs_handle);
+        }
+        ```
+10. retrieveStepperPosition()
+    Se necesita tambien una funcion para leer la ultima posicion almacenada cunado el sistema se reinicie:
+    ```cpp
+    int retrieveStepperPosition() {
+        nvs_handle_t nvs_handle;
+        int32_t storedStepperPosition = 0;
+
+        // Abrir el handle de NVS
+        esp_err_t err = nvs_open("storage", NVS_READONLY, &nvs_handle);
+        if (err == ESP_OK) {
+            // Leer la posición almacenada
+            err = nvs_get_i32(nvs_handle, "stepperPos", &storedStepperPosition);
+            if (err == ESP_OK) {
+                Serial.println("Posición recuperada de NVS");
+            } else {
+                Serial.println("No se encontró la posición en NVS");
+            }
+            nvs_close(nvs_handle);
+        } else {
+            Serial.println("Error al abrir NVS para leer");
+        }
+
+        return storedStepperPosition;
+    }
+    ```
+11. moveToPosition()
+    Mueve el motor paso a paso a una posicion especifica. Calcula cuantos pasos se necesitan y luego actualiza la posicion.
+    - Primero controlamos los limites del motor, nos aseguramos que la posicion no baje de 0 y no supere los 2048 pasos.
+    - Usamos el PID para regular el flujo de gases. El PID ajusta la posicion del motor en funcion de la tasa de flujo medida y el objetivo(input+setpoint).
+12. controlFlow()
+    La logica para controlar el flujo del PID. 
+    - Ajustamos la velocidad en baso a la desviacion entre setpoint y currentFlowRate.
+    - 
+13. smoothFlowRate()
+    Los sensores de flujo pueden ser ruidosos. Si la tasa de flujo fluctua mucho debido al ruido del sensor, por ello se implementa un filtro de suavizado en las lecturas del sensor para obtener una medida mas estable.
+    - Se guardan las ultimas lecturas. El filtro mantiene un historial de lecturas para calcular el promedio. Cuanto mas alto es el numero mas lento se vuelve el filtro.
+    - Se agrega la nueva lectura. Llega la nuevo alectura y esta reemplaza a una de las lecturas anteriores.
+    - Calcula el promedio. 
+    - Devuelve el valor suavizado. Garantiza que los pequeños cambios en la lecutra no afecten la salida del sistema de control.
+14. activateValve() y deactivateValve()
+    Son las funciones para activar y desactivar las valvulas de acuerdo con el input.
+    - Conectadas a los pines del microcontrolador ESP32. Las valvulas estan controladas por MOSFETs, estos activan y desactivan mediante una señal de control un pin digital.
+    - Cada valvula tiene asignado un pin especifico.
+    - HIGH para abrir y LOW para cerrar.
+15. injectGas()
+    Esta funcion la verdad es para hacer mas escalable el codigo, encapsula todo el proceso de inyeccion de gas en una unica funcion. Utiliza las funciones ya mencionadas para inyectar el gas.
+16. continuousInjection()
+    Son las funciones para los escenarios de inyeccion de gas.
+    - O2 inyecta oxigeno aun flujo especifico, maneja la apertura de la valvula, control del flujo y el cierro de la valvula.
+    - N2 analogo al de O2.
+    - O3 esta funcion es un poco mas compleja, requiere activar el generador de ozono antes de inyectar oxigeno. Al abrir el generador de ozono, se asegura que cuando se inyecta oxigeno, se produce ozono, dado que el generador convierte O2 en O3.
+17. continuousMixedGasInjection()
+    Diseñada para inyectar una mezcla de gases (O2, N2 y aire filtrado).
+    - Los parametros de entrada son las tasas de flujo objetivo que se inyectara.
+    - Las valvulas se abren de manera secuencial sin bloquear el sistema, se busca mantener la funcionalidad y la reactividad del sistema mientras se manejan los flujos de gas.
+    - La funcion llama tres veces a la funcion para inyectar cada gas:O2, N2 y aire filtrado.
 
 ### Apuntes
 (1) Esto define la precision del control, un valor de pasos mas alto significa un movimiento mas fino.  
