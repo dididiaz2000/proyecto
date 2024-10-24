@@ -249,7 +249,28 @@ Para que funcionen las bibliotecas que necesitaba he añadido una libreria mas e
     app1,     app,  ota_1,   0x320000, 0x310000,
     spiffs,   data, spiffs,  0x630000,0x1d0000,
     ```
+## Modificaciones para usar el config.json
+Haciendo estas modificaciones deberia dejarme usar el .json que me proporcionaron en cultzyme.
 
+### Entorno virtual o no
+En caso de que no queramos usar el entorno virtual:
+    $ pio run
+Para compilar el proyecto.
+
+Como a veces no deja utilizar todos los comandos de platformio en la terminal podemos crear un entorno virtual.
+1. Creamos un nuevo entorno virtual
+    $ python3 -m venv venv
+2. Activamos el entorno virtual
+    $ source venv/bin/activate
+3. Desactivamos el entorno virtual
+    $ deactivate
+
+### load_config.py
+Para poder usar el config.json primero tenemos que configurar un archivo llamado load_config.py en python. Lo que hace es cargar un archivo de configuracion en formato JSON.
+
+### platformio.ini
+Para poder usar el load_config.py debemos añdir la siguiente linea:
+    $ extra_scripts = load_config.py
 
 ### Apuntes
 (1) Esto define la precision del control, un valor de pasos mas alto significa un movimiento mas fino.  

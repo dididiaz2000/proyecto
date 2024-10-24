@@ -3,6 +3,7 @@
 #include <PID_v1.h>
 #include <nvs.h>
 #include <nvs_flash.h>
+#include <WiFi.h>
 
 #define IN1 40
 #define IN2 39
@@ -46,6 +47,8 @@ void setup() {
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    Serial.begin(115200); // Inicializa la comunicación serial
 
     // Inicializar pines
     pinMode(O3_GEN_PIN, OUTPUT);
